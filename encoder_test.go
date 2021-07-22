@@ -1,6 +1,7 @@
 package asar // import "layeh.com/asar"
 
 import (
+	"bytes"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -23,7 +24,12 @@ func TestEncodeUnpacked(t *testing.T) {
 		root.Children,
 		New("sample", nil, 0, 0, FlagUnpacked),
 	)
-	if _, err := root.EncodeTo(ioutil.Discard); err != nil {
+	obuf := bytes.NewBuffer(nil)
+
+	if _, err := root.EncodeTo(obuf); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if _, err := Decode(bytes.NewReader(obuf.Bytes())); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }

@@ -84,8 +84,9 @@ func (e *Entry) EncodeTo(w io.Writer) (n int64, err error) {
 	}()
 
 	encoder := entryEncoder{}
+	const reserveSize = 16
 	{
-		var reserve [16]byte
+		var reserve [reserveSize]byte
 		encoder.Header.Write(reserve[:])
 	}
 	encoder.Encoder = json.NewEncoder(&encoder.Header)
@@ -93,16 +94,18 @@ func (e *Entry) EncodeTo(w io.Writer) (n int64, err error) {
 		return
 	}
 
+	paddingLength := encoder.Header.Len() % 4
+
 	{
 		var padding [3]byte
-		encoder.Header.Write(padding[:encoder.Header.Len()%4])
+		encoder.Header.Write(padding[:paddingLength])
 	}
 
 	header := encoder.Header.Bytes()
 	binary.LittleEndian.PutUint32(header[:4], 4)
-	binary.LittleEndian.PutUint32(header[4:8], 8+uint32(encoder.Header.Len()))
-	binary.LittleEndian.PutUint32(header[8:12], 4+uint32(encoder.Header.Len()))
-	binary.LittleEndian.PutUint32(header[12:16], uint32(encoder.Header.Len()))
+	binary.LittleEndian.PutUint32(header[4:8], 8+uint32(encoder.Header.Len()-paddingLength-reserveSize))
+	binary.LittleEndian.PutUint32(header[8:12], 4+uint32(encoder.Header.Len()-paddingLength-reserveSize))
+	binary.LittleEndian.PutUint32(header[12:16], uint32(encoder.Header.Len()-paddingLength-reserveSize))
 
 	n, err = encoder.Header.WriteTo(w)
 	if err != nil {
